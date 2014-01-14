@@ -20,22 +20,8 @@ function getApiKey()
 {
 	var apiKey = GM_getValue("apiKey");
 
-	// API key not set yet, ask for it
 	if (apiKey == undefined)
-	{
-		while (true)
-		{
-			apiKey = window.prompt("Please enter your API key", "");
-
-			if (apiKey && !/^[a-fA-F0-9]{32}$/.test(apiKey))
-				alert("That was not a valid API key, please try again");
-			else
-				break;
-		}
-
-		if (apiKey)
-			GM_setValue("apiKey", apiKey);
-	}
+		alert("Please enter your API key first!");
 
 	return apiKey;
 }
@@ -98,6 +84,13 @@ function downloadVocab(runAfter)
 
 			if (json)
 			{
+				if ("error" in json)
+				{
+					alert("Error from WaniKani: " + json.error.message);
+					downloading = false;
+					return;
+				}
+
 				GM_setValue("refreshTime", Math.floor(new Date().getTime() / 60000));
 
 				// Create the vocab map that will be stored
@@ -211,6 +204,7 @@ menu.outerHTML = '<menu id="wanikanify-menu" type="context">\
 	<menu label="WaniKanify" icon="http://i.imgur.com/FuoFVCH.png">\
 		<menuitem label="Run WaniKanify" id="wanikanify-run"  icon="http://i.imgur.com/FuoFVCH.png"></menuitem>\
 		<menuitem label="Refresh vocabulary" id="wanikanify-refresh"></menuitem>\
+		<menuitem label="Change API key" id="wanikanify-apikey"></menuitem>\
 	</menu>\
 </menu>';
 
@@ -218,7 +212,7 @@ menu.outerHTML = '<menu id="wanikanify-menu" type="context">\
 document.body.setAttribute("contextmenu", "wanikanify-menu");
 
 // Run script
-document.querySelector("#wanikanify-run").addEventListener("click", function()
+document.querySelector("#wanikanify-run").addEventListener("click", function ()
 {
 	var apiKey = getApiKey();
 	if (apiKey != undefined)
@@ -226,11 +220,28 @@ document.querySelector("#wanikanify-run").addEventListener("click", function()
 }, false);
 
 // Refresh vocabulary
-document.querySelector("#wanikanify-refresh").addEventListener("click", function()
+document.querySelector("#wanikanify-refresh").addEventListener("click", function ()
 {
 	var apiKey = getApiKey();
 	if (apiKey != undefined)
 		downloadVocab();
+}, false);
+
+// Refresh vocabulary
+document.querySelector("#wanikanify-apikey").addEventListener("click", function ()
+{
+	while (true)
+	{
+		apiKey = window.prompt("Please enter your API key", "");
+
+		if (apiKey && !/^[a-fA-F0-9]{32}$/.test(apiKey))
+			alert("That was not a valid API key, please try again");
+		else
+			break;
+	}
+
+	if (apiKey)
+		GM_setValue("apiKey", apiKey);
 }, false);
 
 /*
