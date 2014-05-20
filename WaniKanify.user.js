@@ -3,11 +3,13 @@
 // @namespace   wanikani
 // @description Firefox version of chedkid's excellent Chrome app
 // @include     *
-// @version     1.0
+// @version     1.2
 // @grant       GM_xmlhttpRequest
 // @grant       GM_getValue
 // @grant       GM_setValue
-// @require		http://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js
+// @require	http://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js
+// @downloadURL https://dl.dropboxusercontent.com/u/80112437/WaniKanify.user.js
+// @updateURL   https://dl.dropboxusercontent.com/u/80112437/WaniKanify.user.js
 // ==/UserScript==
 
 // Current format version of the vocab database
@@ -15,6 +17,14 @@ var FORMAT_VER = 2;
 
 // Lock to ensure only one download at once
 var downloading = false;
+
+// Main
+window.addEventListener ("load", function ()
+{
+	if (GM_getValue("autoRun") == 1)
+		run(false);
+}, false);
+
 
 function getApiKey()
 {
@@ -142,12 +152,36 @@ function downloadVocab(runAfter)
 					}
 				}
 
+				String.prototype.hashCode = function(){
+				    var hash = 0, i, char;
+				    if (this.length == 0) return hash;
+				    for (i = 0, l = this.length; i < l; i++) {
+				        char  = this.charCodeAt(i);
+				        hash  = ((hash<<5)-hash)+char;
+				        hash |= 0; // Convert to 32bit integer
+				    }
+				    return hash;
+				};
+
 				// Update the new vocab list in the storage
-				GM_setValue("vocab", JSON.stringify(vocabMap));
+				vocabJson = JSON.stringify(vocabMap);
+				GM_setValue("vocab", vocabJson);
+				if(!runAfter)
+				{
+					if (vocabJson.hashCode() != GM_getValue("vocabHash"))
+					{
+						alert("Successfully updated vocab!");
+						GM_setValue("vocabHash", vocabJson.hashCode());
+					}
+					// Only inform the user that the vocab is up to date if he manually requested to update it
+					else 
+					{
+						alert("Vocab already up to date");
+					}
+				}
 				GM_setValue("formatVer", FORMAT_VER);
 
 				// Unlock download lock
-				console.log("Successfully updated vocab!");
 				downloading = false;
 
 				// If wanted, immediately run the script
@@ -174,6 +208,7 @@ function replaceVocab(vocabMap)
 		}
 	}
 
+	console.log(vocabMap);
 	console.log("Replacing vocab...");
 
 	var replaceCallback = function(str)
@@ -190,10 +225,10 @@ function replaceVocab(vocabMap)
 	var nodes = $("body *:not(noscript):not(script):not(style)");
 
 	// Very naive attempt at replacing vocab consisting of multiple words first
-	nodes.replaceText(/\b(\S+\s+\S+\s+\S+\s+\S+)\b/g, replaceCallback);
-	nodes.replaceText(/\b(\S+\s+\S+\s+\S+)\b/g, replaceCallback);
-	nodes.replaceText(/\b(\S+\s+\S+)\b/g, replaceCallback);
-	nodes.replaceText(/\b(\S+)\b/g, replaceCallback);
+	nodes.replaceText(/\b(\S+?\s+\S+?\s+\S+?\s+\S+?)\b/g, replaceCallback);
+	nodes.replaceText(/\b(\S+?\s+\S+?\s+\S+?)\b/g, replaceCallback);
+	nodes.replaceText(/\b(\S+?\s+\S+?)\b/g, replaceCallback);
+	nodes.replaceText(/\b(\S+?)\b/g, replaceCallback);
 
 	console.log("Vocab replaced!");	
 }
@@ -204,6 +239,7 @@ menu.outerHTML = '<menu id="wanikanify-menu" type="context">\
 	<menu label="WaniKanify" icon="http://i.imgur.com/FuoFVCH.png">\
 		<menuitem label="Run WaniKanify" id="wanikanify-run"  icon="http://i.imgur.com/FuoFVCH.png"></menuitem>\
 		<menuitem label="Refresh vocabulary" id="wanikanify-refresh"></menuitem>\
+		<menuitem label="Enable auto-run" id="wanikanify-autorun"></menuitem>\
 		<menuitem label="Change API key" id="wanikanify-apikey"></menuitem>\
 	</menu>\
 </menu>';
@@ -227,12 +263,21 @@ document.querySelector("#wanikanify-refresh").addEventListener("click", function
 		downloadVocab();
 }, false);
 
+
+// Specifiy whether to run automatically
+document.querySelector("#wanikanify-autorun").addEventListener("click", function ()
+{
+	var autoRun = parseInt(window.prompt("Enter 1 to enable auto-run and 0 to disable", GM_getValue("autoRun") ? 1 : 0));
+	GM_setValue("autoRun", autoRun);
+}, false);
+
 // Refresh vocabulary
 document.querySelector("#wanikanify-apikey").addEventListener("click", function ()
 {
 	while (true)
 	{
-		apiKey = window.prompt("Please enter your API key", "");
+		apiKey = GM_getValue("apiKey");
+		apiKey = window.prompt("Please enter your API key", apiKey ? apiKey : "");
 
 		if (apiKey && !/^[a-fA-F0-9]{32}$/.test(apiKey))
 			alert("That was not a valid API key, please try again");
