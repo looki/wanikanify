@@ -31,7 +31,7 @@ function getApiKey()
 	var apiKey = GM_getValue("apiKey");
 
 	if (apiKey == undefined)
-		alert("Please enter your API key first!");
+		promptApiKey();
 
 	return apiKey;
 }
@@ -48,8 +48,13 @@ function run(refreshFirst)
 	var refreshTime = GM_getValue("refreshTime");
 	var refreshFormat = GM_getValue("formatVer");
 
+	// Hotfix: Allow script to enforce refresh
+	var mustRefresh = GM_getValue("mustRefresh") == 1;
+	GM_setValue("mustRefresh", 0);
+
 	// See if we should to refresh. If a week has passed, it's probably a good idea anyway
-	var shouldRefresh = refreshFirst || (refreshFormat != FORMAT_VER) || (refreshTime == undefined) || (currentTime - refreshTime >= 10080);
+	var shouldRefresh = mustRefresh || refreshFirst || (GM_getValue("vocab", "") == "") || (refreshFormat != FORMAT_VER)
+	|| (refreshTime == undefined) || (currentTime - refreshTime >= 10080);
 
 	// No refresh needed, simply replace vocab...
 	if (!shouldRefresh)
@@ -274,6 +279,13 @@ document.querySelector("#wanikanify-autorun").addEventListener("click", function
 // Refresh vocabulary
 document.querySelector("#wanikanify-apikey").addEventListener("click", function ()
 {
+	promptApiKey();
+}, false);
+
+function promptApiKey()
+{
+	var apiKey;
+
 	while (true)
 	{
 		apiKey = GM_getValue("apiKey");
@@ -285,9 +297,9 @@ document.querySelector("#wanikanify-apikey").addEventListener("click", function 
 			break;
 	}
 
-	if (apiKey)
-		GM_setValue("apiKey", apiKey);
-}, false);
+	GM_setValue("apiKey", apiKey);
+	GM_setValue("mustRefresh", 1);
+}
 
 /*
  * jQuery replaceText - v1.1 - 11/21/2009
