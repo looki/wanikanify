@@ -3,13 +3,13 @@
 // @namespace   wanikani
 // @description Firefox version of chedkid's excellent Chrome app
 // @include     *
-// @version     1.2
+// @version     1.3
 // @grant       GM_xmlhttpRequest
 // @grant       GM_getValue
 // @grant       GM_setValue
 // @require http://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js
-// @downloadURL https://dl.dropboxusercontent.com/u/80112437/WaniKanify.user.js
-// @updateURL   https://dl.dropboxusercontent.com/u/80112437/WaniKanify.user.js
+// @downloadURL https://greasyfork.org/scripts/4719-wanikanify/code/WaniKanify.user.js
+// @updateURL   https://greasyfork.org/scripts/4719-wanikanify/code/WaniKanify.meta.js
 // ==/UserScript==
 
 // Current format version of the vocab database
