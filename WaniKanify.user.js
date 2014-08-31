@@ -3,7 +3,7 @@
 // @namespace   wanikani
 // @description Firefox version of chedkid's excellent Chrome app
 // @include     *
-// @version     1.3.5
+// @version     1.4.0
 // @grant       GM_xmlhttpRequest
 // @grant       GM_getValue
 // @grant       GM_setValue
