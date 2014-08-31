@@ -200,10 +200,11 @@ function replaceVocab(vocabMap) {
     console.log("Replacing vocab...");
 
     var replaceCallback = function(str) {
-        var translation = vocabMap[str.toLowerCase()];
-        if (translation)
+        if (vocabMap.hasOwnProperty(str.toLowerCase())) {
+            var translation = vocabMap[str.toLowerCase()];
             return '<span class="wanikanified" title="' + str + '" data-en="' + str + '" data-jp="' + translation +
                 '" onClick="var t = this.getAttribute(\'title\'); this.setAttribute(\'title\', this.innerHTML); this.innerHTML = t;">' + translation + '<\/span>';
+        }
 
         // Couldn't replace anything, leave as is
         return str;
