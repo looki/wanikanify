@@ -7,7 +7,7 @@
 // @grant       GM_xmlhttpRequest
 // @grant       GM_getValue
 // @grant       GM_setValue
-// @require	http://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js
+// @require http://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js
 // @downloadURL https://dl.dropboxusercontent.com/u/80112437/WaniKanify.user.js
 // @updateURL   https://dl.dropboxusercontent.com/u/80112437/WaniKanify.user.js
 // ==/UserScript==
@@ -19,286 +19,262 @@ var FORMAT_VER = 2;
 var downloading = false;
 
 // Main
-window.addEventListener ("load", function ()
-{
-	if (GM_getValue("autoRun") == 1)
-		run(false);
+window.addEventListener ("load", function () {
+    if (GM_getValue("autoRun") == 1)
+        run(false);
 }, false);
 
 
-function getApiKey()
-{
-	var apiKey = GM_getValue("apiKey");
+function getApiKey() {
+    var apiKey = GM_getValue("apiKey");
 
-	if (apiKey == undefined)
-		promptApiKey();
+    if (apiKey == undefined)
+        promptApiKey();
 
-	return apiKey;
+    return apiKey;
 }
 
-function run(refreshFirst)
-{
-	// Ignore current vocab download
-	downloading = false;
+function run(refreshFirst) {
+    // Ignore current vocab download
+    downloading = false;
 
-	// Get the current timestamp (in minutes)
-	var currentTime = Math.floor(new Date().getTime() / 60000);
+    // Get the current timestamp (in minutes)
+    var currentTime = Math.floor(new Date().getTime() / 60000);
 
-	// Get the time and the vocab format from when the vocab list was last refreshed
-	var refreshTime = GM_getValue("refreshTime");
-	var refreshFormat = GM_getValue("formatVer");
+    // Get the time and the vocab format from when the vocab list was last refreshed
+    var refreshTime = GM_getValue("refreshTime");
+    var refreshFormat = GM_getValue("formatVer");
 
-	// Hotfix: Allow script to enforce refresh
-	var mustRefresh = GM_getValue("mustRefresh") == 1;
-	GM_setValue("mustRefresh", 0);
+    // Hotfix: Allow script to enforce refresh
+    var mustRefresh = GM_getValue("mustRefresh") == 1;
+    GM_setValue("mustRefresh", 0);
 
-	// See if we should to refresh. If a week has passed, it's probably a good idea anyway
-	var shouldRefresh = mustRefresh || refreshFirst || (GM_getValue("vocab", "") == "") || (refreshFormat != FORMAT_VER)
-	|| (refreshTime == undefined) || (currentTime - refreshTime >= 10080);
+    // See if we should to refresh. If a week has passed, it's probably a good idea anyway
+    var shouldRefresh = mustRefresh || refreshFirst || (GM_getValue("vocab", "") == "") || (refreshFormat != FORMAT_VER)
+    || (refreshTime == undefined) || (currentTime - refreshTime >= 10080);
 
-	// No refresh needed, simply replace vocab...
-	if (!shouldRefresh)
-		replaceVocab();
-	// Update vocab list if last refresh was too long ago (and replace afterwards), or old version
-	else
-		downloadVocab(true);
+    // No refresh needed, simply replace vocab...
+    if (!shouldRefresh)
+        replaceVocab();
+    // Update vocab list if last refresh was too long ago (and replace afterwards), or old version
+    else
+        downloadVocab(true);
 }
 
-function downloadVocab(runAfter)
-{
-	if (downloading)
-	{
-		console.log("Attempted to download WaniKani data while already downloading");
-		return;
-	}
+function downloadVocab(runAfter) {
+    if (downloading) {
+        console.log("Attempted to download WaniKani data while already downloading");
+        return;
+    }
 
-	var apiKey = GM_getValue("apiKey");
-	if (apiKey == undefined)
-		return;
+    var apiKey = GM_getValue("apiKey");
+    if (apiKey == undefined)
+        return;
 
-	console.log("Downloading new vocab data...");
-	downloading = true;
+    console.log("Downloading new vocab data...");
+    downloading = true;
 
-	GM_xmlhttpRequest({
-		method: "GET",
-		url: "http://www.wanikani.com/api/v1.2/user/" + apiKey + "/vocabulary/",
-		onerror: function (response)
-		{
-			alert("Error while downloading WaniKani data. Please try again later.");
-			downloading = false;
-		},
-		onload: function (response)
-		{
-			var json;
+    GM_xmlhttpRequest({
+        method: "GET",
+        url: "http://www.wanikani.com/api/v1.2/user/" + apiKey + "/vocabulary/",
+        onerror: function (response) {
+            alert("Error while downloading WaniKani data. Please try again later.");
+            downloading = false;
+        },
+        onload: function (response) {
+            var json;
 
-			try {
-				json = JSON.parse(response.responseText);
-			} catch (e) {
-				alert("Unable to process WaniKani data. Please try again later.", e);
-			}
+            try {
+                json = JSON.parse(response.responseText);
+            } catch (e) {
+                alert("Unable to process WaniKani data. Please try again later.", e);
+            }
 
-			if (json)
-			{
-				if ("error" in json)
-				{
-					alert("Error from WaniKani: " + json.error.message);
-					downloading = false;
-					return;
-				}
+            if (json) {
+                if ("error" in json) {
+                    alert("Error from WaniKani: " + json.error.message);
+                    downloading = false;
+                    return;
+                }
 
-				GM_setValue("refreshTime", Math.floor(new Date().getTime() / 60000));
+                GM_setValue("refreshTime", Math.floor(new Date().getTime() / 60000));
 
-				// Create the vocab map that will be stored
-				var vocabMap = {};
-				// Loop through all received words
-				var vocabList = json.requested_information.general;
+                // Create the vocab map that will be stored
+                var vocabMap = {};
+                // Loop through all received words
+                var vocabList = json.requested_information.general;
 
-				for (var i in vocabList)
-				{
-					var vocab = vocabList[i];
+                for (var i in vocabList) {
+                    var vocab = vocabList[i];
 
-					// Skip words not yet learned
-					if (!vocab.user_specific)
-						continue;
+                    // Skip words not yet learned
+                    if (!vocab.user_specific)
+                        continue;
 
-					// Split multiple spellings
-					var meanings = vocab.meaning.split(", ");
+                    // Split multiple spellings
+                    var meanings = vocab.meaning.split(", ");
 
-					// Conjugate verbs
-					var conjugations = [];
-					for (var m in meanings)
-					{
-						var word = meanings[m];
+                    // Conjugate verbs
+                    var conjugations = [];
+                    for (var m in meanings) {
+                        var word = meanings[m];
 
-						// If a verb...
-						if (/^to /.test(word))
-						{
-							// Remove leading 'to'
-							meanings[m] = word.substr(3);
+                        // If a verb...
+                        if (/^to /.test(word))
+                        {
+                            // Remove leading 'to'
+                            meanings[m] = word.substr(3);
 
-							// Remove 'e' suffix for conjugations
-							if (word.slice(-1) == "e")
-								word = word.slice(0, -1);
+                            // Remove 'e' suffix for conjugations
+                            if (word.slice(-1) == "e")
+                                word = word.slice(0, -1);
 
-							if (!/ /.test(word))
-								conjugations.push(word + "ed", word + "es", word + "en", word + "es", word + "s", word + "ing");
-						}
+                            if (!/ /.test(word))
+                                conjugations.push(word + "ed", word + "es", word + "en", word + "es", word + "s", word + "ing");
+                        }
 
-						// Not a verb, try plural
-						else if (word.length >= 3 && word.slice(-1) != "s")
-							conjugations.push(word + "s");
-					}
-					meanings.push.apply(meanings, conjugations);
+                        // Not a verb, try plural
+                        else if (word.length >= 3 && word.slice(-1) != "s")
+                            conjugations.push(word + "s");
+                    }
+                    meanings.push.apply(meanings, conjugations);
 
-					// After updating the meanings,
-					for (var m in meanings)
-					{
-						vocabMap[meanings[m]] = vocab.character;
-					}
-				}
+                    // After updating the meanings,
+                    for (var m in meanings) {
+                        vocabMap[meanings[m]] = vocab.character;
+                    }
+                }
 
-				String.prototype.hashCode = function(){
-				    var hash = 0, i, char;
-				    if (this.length == 0) return hash;
-				    for (i = 0, l = this.length; i < l; i++) {
-				        char  = this.charCodeAt(i);
-				        hash  = ((hash<<5)-hash)+char;
-				        hash |= 0; // Convert to 32bit integer
-				    }
-				    return hash;
-				};
+                String.prototype.hashCode = function() {
+                    var hash = 0, i, char;
+                    if (this.length == 0) return hash;
+                    for (i = 0, l = this.length; i < l; i++) {
+                        char  = this.charCodeAt(i);
+                        hash  = ((hash<<5)-hash)+char;
+                        hash |= 0; // Convert to 32bit integer
+                    }
+                    return hash;
+                };
 
-				// Update the new vocab list in the storage
-				vocabJson = JSON.stringify(vocabMap);
-				GM_setValue("vocab", vocabJson);
-				if(!runAfter)
-				{
-					if (vocabJson.hashCode() != GM_getValue("vocabHash"))
-					{
-						alert("Successfully updated vocab!");
-						GM_setValue("vocabHash", vocabJson.hashCode());
-					}
-					// Only inform the user that the vocab is up to date if he manually requested to update it
-					else 
-					{
-						alert("Vocab already up to date");
-					}
-				}
-				GM_setValue("formatVer", FORMAT_VER);
+                // Update the new vocab list in the storage
+                vocabJson = JSON.stringify(vocabMap);
+                GM_setValue("vocab", vocabJson);
+                if(!runAfter) {
+                    if (vocabJson.hashCode() != GM_getValue("vocabHash")) {
+                        alert("Successfully updated vocab!");
+                        GM_setValue("vocabHash", vocabJson.hashCode());
+                    }
+                    // Only inform the user that the vocab is up to date if he manually requested to update it
+                    else {
+                        alert("Vocab already up to date");
+                    }
+                }
+                GM_setValue("formatVer", FORMAT_VER);
 
-				// Unlock download lock
-				downloading = false;
+                // Unlock download lock
+                downloading = false;
 
-				// If wanted, immediately run the script
-				if (runAfter)
-					replaceVocab(vocabMap);
-			}
-		}
-	});
+                // If wanted, immediately run the script
+                if (runAfter)
+                    replaceVocab(vocabMap);
+            }
+        }
+    });
 }
 
-function replaceVocab(vocabMap)
-{
-	// No vocab map given, try to parse from stored JSON
-	if (!vocabMap)
-	{
-		try {
-			vocabMap = JSON.parse(GM_getValue("vocab"), {});
-			if (!vocabMap || (vocabMap && jQuery.isEmptyObject(vocabMap)))
-				throw 1;
-		} catch (e) {
-			alert("Error while parsing the vocab list; deleting it now. Please try again.");
-			GM_setValue("vocab", "");
-			return;
-		}
-	}
+function replaceVocab(vocabMap) {
+    // No vocab map given, try to parse from stored JSON
+    if (!vocabMap) {
+        try {
+            vocabMap = JSON.parse(GM_getValue("vocab"), {});
+            if (!vocabMap || (vocabMap && jQuery.isEmptyObject(vocabMap)))
+                throw 1;
+        } catch (e) {
+            alert("Error while parsing the vocab list; deleting it now. Please try again.");
+            GM_setValue("vocab", "");
+            return;
+        }
+    }
 
-	console.log(vocabMap);
-	console.log("Replacing vocab...");
+    console.log(vocabMap);
+    console.log("Replacing vocab...");
 
-	var replaceCallback = function(str)
-	{
-		var translation = vocabMap[str.toLowerCase()];
-		if (translation)
-			return '<span class="wanikanified" title="' + str + '" data-en="' + str + '" data-jp="' + translation +
-				'" onClick="var t = this.getAttribute(\'title\'); this.setAttribute(\'title\', this.innerHTML); this.innerHTML = t;">' + translation + '<\/span>';
+    var replaceCallback = function(str) {
+        var translation = vocabMap[str.toLowerCase()];
+        if (translation)
+            return '<span class="wanikanified" title="' + str + '" data-en="' + str + '" data-jp="' + translation +
+                '" onClick="var t = this.getAttribute(\'title\'); this.setAttribute(\'title\', this.innerHTML); this.innerHTML = t;">' + translation + '<\/span>';
 
-		// Couldn't replace anything, leave as is
-		return str;
-	};
+        // Couldn't replace anything, leave as is
+        return str;
+    };
 
-	var nodes = $("body *:not(noscript):not(script):not(style)");
+    var nodes = $("body *:not(noscript):not(script):not(style)");
 
-	// Very naive attempt at replacing vocab consisting of multiple words first
-	nodes.replaceText(/\b(\S+?\s+\S+?\s+\S+?\s+\S+?)\b/g, replaceCallback);
-	nodes.replaceText(/\b(\S+?\s+\S+?\s+\S+?)\b/g, replaceCallback);
-	nodes.replaceText(/\b(\S+?\s+\S+?)\b/g, replaceCallback);
-	nodes.replaceText(/\b(\S+?)\b/g, replaceCallback);
+    // Very naive attempt at replacing vocab consisting of multiple words first
+    nodes.replaceText(/\b(\S+?\s+\S+?\s+\S+?\s+\S+?)\b/g, replaceCallback);
+    nodes.replaceText(/\b(\S+?\s+\S+?\s+\S+?)\b/g, replaceCallback);
+    nodes.replaceText(/\b(\S+?\s+\S+?)\b/g, replaceCallback);
+    nodes.replaceText(/\b(\S+?)\b/g, replaceCallback);
 
-	console.log("Vocab replaced!");	
+    console.log("Vocab replaced!"); 
 }
 
 // Create the menu
 var menu = document.body.appendChild(document.createElement("menu"));
 menu.outerHTML = '<menu id="wanikanify-menu" type="context">\
-	<menu label="WaniKanify" icon="http://i.imgur.com/FuoFVCH.png">\
-		<menuitem label="Run WaniKanify" id="wanikanify-run"  icon="http://i.imgur.com/FuoFVCH.png"></menuitem>\
-		<menuitem label="Refresh vocabulary" id="wanikanify-refresh"></menuitem>\
-		<menuitem label="Enable auto-run" id="wanikanify-autorun"></menuitem>\
-		<menuitem label="Change API key" id="wanikanify-apikey"></menuitem>\
-	</menu>\
+    <menu label="WaniKanify" icon="http://i.imgur.com/FuoFVCH.png">\
+        <menuitem label="Run WaniKanify" id="wanikanify-run"  icon="http://i.imgur.com/FuoFVCH.png"></menuitem>\
+        <menuitem label="Refresh vocabulary" id="wanikanify-refresh"></menuitem>\
+        <menuitem label="Enable auto-run" id="wanikanify-autorun"></menuitem>\
+        <menuitem label="Change API key" id="wanikanify-apikey"></menuitem>\
+    </menu>\
 </menu>';
 
 // Add to context menu
 document.body.setAttribute("contextmenu", "wanikanify-menu");
 
 // Run script
-document.querySelector("#wanikanify-run").addEventListener("click", function ()
-{
-	var apiKey = getApiKey();
-	if (apiKey != undefined)
-		run(false);
+document.querySelector("#wanikanify-run").addEventListener("click", function() {
+    var apiKey = getApiKey();
+    if (apiKey != undefined)
+        run(false);
 }, false);
 
 // Refresh vocabulary
-document.querySelector("#wanikanify-refresh").addEventListener("click", function ()
-{
-	var apiKey = getApiKey();
-	if (apiKey != undefined)
-		downloadVocab();
+document.querySelector("#wanikanify-refresh").addEventListener("click", function() {
+    var apiKey = getApiKey();
+    if (apiKey != undefined)
+        downloadVocab();
 }, false);
 
 
 // Specifiy whether to run automatically
-document.querySelector("#wanikanify-autorun").addEventListener("click", function ()
-{
-	var autoRun = parseInt(window.prompt("Enter 1 to enable auto-run and 0 to disable", GM_getValue("autoRun") ? 1 : 0));
-	GM_setValue("autoRun", autoRun);
+document.querySelector("#wanikanify-autorun").addEventListener("click", function() {
+    var autoRun = parseInt(window.prompt("Enter 1 to enable auto-run and 0 to disable", GM_getValue("autoRun") ? 1 : 0));
+    GM_setValue("autoRun", autoRun);
 }, false);
 
 // Refresh vocabulary
-document.querySelector("#wanikanify-apikey").addEventListener("click", function ()
-{
-	promptApiKey();
+document.querySelector("#wanikanify-apikey").addEventListener("click", function() {
+    promptApiKey();
 }, false);
 
-function promptApiKey()
-{
-	var apiKey;
+function promptApiKey() {
+    var apiKey;
 
-	while (true)
-	{
-		apiKey = GM_getValue("apiKey");
-		apiKey = window.prompt("Please enter your API key", apiKey ? apiKey : "");
+    while (true) {
+        apiKey = GM_getValue("apiKey");
+        apiKey = window.prompt("Please enter your API key", apiKey ? apiKey : "");
 
-		if (apiKey && !/^[a-fA-F0-9]{32}$/.test(apiKey))
-			alert("That was not a valid API key, please try again");
-		else
-			break;
-	}
+        if (apiKey && !/^[a-fA-F0-9]{32}$/.test(apiKey))
+            alert("That was not a valid API key, please try again");
+        else
+            break;
+    }
 
-	GM_setValue("apiKey", apiKey);
-	GM_setValue("mustRefresh", 1);
+    GM_setValue("apiKey", apiKey);
+    GM_setValue("mustRefresh", 1);
 }
 
 /*
