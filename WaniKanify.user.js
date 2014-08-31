@@ -3,11 +3,12 @@
 // @namespace   wanikani
 // @description Firefox version of chedkid's excellent Chrome app
 // @include     *
-// @version     1.3
+// @version     1.3.5
 // @grant       GM_xmlhttpRequest
 // @grant       GM_getValue
 // @grant       GM_setValue
-// @require http://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js
+// @grant       GM_registerMenuCommand
+// @require     http://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js
 // @downloadURL https://greasyfork.org/scripts/4719-wanikanify/code/WaniKanify.user.js
 // @updateURL   https://greasyfork.org/scripts/4719-wanikanify/code/WaniKanify.meta.js
 // ==/UserScript==
@@ -18,12 +19,64 @@ var FORMAT_VER = 2;
 // Lock to ensure only one download at once
 var downloading = false;
 
-// Main
+/* Main */
 window.addEventListener ("load", function () {
+
+    GM_registerMenuCommand("Wanikanify: Run", tryRun);
+    GM_registerMenuCommand("Wanikanify: Refresh vocabulary", tryRefreshVocabulary);
+    GM_registerMenuCommand("Wanikanify: Enable auto-run", promptAutoRun);
+    GM_registerMenuCommand("Wanikanify: Set API key", promptApiKey);
+
     if (GM_getValue("autoRun") == 1)
         run(false);
+
 }, false);
 
+/**
+ * User interface
+ */
+
+/* Run script */
+function tryRun() {
+    var apiKey = getApiKey();
+    if (apiKey != undefined)
+        run(false);
+}
+
+/* Refresh vocabulary */
+function tryRefreshVocabulary() {
+    var apiKey = getApiKey();
+    if (apiKey != undefined)
+        downloadVocab();
+}
+
+/* Specifiy whether to run automatically */
+function promptAutoRun() {
+    var autoRun = parseInt(window.prompt("Enter 1 to enable auto-run and 0 to disable", GM_getValue("autoRun") ? 1 : 0));
+    GM_setValue("autoRun", autoRun);
+}
+
+/* Specify the WaniKani API key */
+function promptApiKey() {
+    var apiKey;
+
+    while (true) {
+        apiKey = GM_getValue("apiKey");
+        apiKey = window.prompt("Please enter your API key", apiKey ? apiKey : "");
+
+        if (apiKey && !/^[a-fA-F0-9]{32}$/.test(apiKey))
+            alert("That was not a valid API key, please try again");
+        else
+            break;
+    }
+
+    GM_setValue("apiKey", apiKey);
+    GM_setValue("mustRefresh", 1);
+}
+
+/**
+ * Runtime code
+ */
 
 function getApiKey() {
     var apiKey = GM_getValue("apiKey");
@@ -61,7 +114,7 @@ function run(refreshFirst) {
         downloadVocab(true);
 }
 
-function downloadVocab(runAfter) {
+function downloadVocab(runAfter, wasManual) {
     if (downloading) {
         console.log("Attempted to download WaniKani data while already downloading");
         return;
@@ -219,63 +272,6 @@ function replaceVocab(vocabMap) {
     nodes.replaceText(/\b(\S+?)\b/g, replaceCallback);
 
     console.log("Vocab replaced!"); 
-}
-
-// Create the menu
-var menu = document.body.appendChild(document.createElement("menu"));
-menu.outerHTML = '<menu id="wanikanify-menu" type="context">\
-    <menu label="WaniKanify" icon="http://i.imgur.com/FuoFVCH.png">\
-        <menuitem label="Run WaniKanify" id="wanikanify-run"  icon="http://i.imgur.com/FuoFVCH.png"></menuitem>\
-        <menuitem label="Refresh vocabulary" id="wanikanify-refresh"></menuitem>\
-        <menuitem label="Enable auto-run" id="wanikanify-autorun"></menuitem>\
-        <menuitem label="Change API key" id="wanikanify-apikey"></menuitem>\
-    </menu>\
-</menu>';
-
-// Add to context menu
-document.body.setAttribute("contextmenu", "wanikanify-menu");
-
-// Run script
-document.querySelector("#wanikanify-run").addEventListener("click", function() {
-    var apiKey = getApiKey();
-    if (apiKey != undefined)
-        run(false);
-}, false);
-
-// Refresh vocabulary
-document.querySelector("#wanikanify-refresh").addEventListener("click", function() {
-    var apiKey = getApiKey();
-    if (apiKey != undefined)
-        downloadVocab();
-}, false);
-
-
-// Specifiy whether to run automatically
-document.querySelector("#wanikanify-autorun").addEventListener("click", function() {
-    var autoRun = parseInt(window.prompt("Enter 1 to enable auto-run and 0 to disable", GM_getValue("autoRun") ? 1 : 0));
-    GM_setValue("autoRun", autoRun);
-}, false);
-
-// Refresh vocabulary
-document.querySelector("#wanikanify-apikey").addEventListener("click", function() {
-    promptApiKey();
-}, false);
-
-function promptApiKey() {
-    var apiKey;
-
-    while (true) {
-        apiKey = GM_getValue("apiKey");
-        apiKey = window.prompt("Please enter your API key", apiKey ? apiKey : "");
-
-        if (apiKey && !/^[a-fA-F0-9]{32}$/.test(apiKey))
-            alert("That was not a valid API key, please try again");
-        else
-            break;
-    }
-
-    GM_setValue("apiKey", apiKey);
-    GM_setValue("mustRefresh", 1);
 }
 
 /*
